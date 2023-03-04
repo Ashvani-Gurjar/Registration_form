@@ -12,12 +12,12 @@ const auth = require("./middleware/auth");
 const bcrypt = require('bcryptjs');
 
 
-app.use(cookieParser());
+app.use(cookieParser()); // this is used to get token for sites.
 app.use(express.json());  // this is used for postman
 app.use(express.urlencoded({ extended: false })); // for use google json gets
 
 
-console.log(process.env.SECRET_KEY)// no-one can see this when used .env 
+// console.log(process.env.SECRET_KEY)// no-one can see this when used .env 
 
 //serving public file which is store in public folder
 const public_path = path.join(__dirname, "../public");
@@ -55,15 +55,25 @@ app.get("/login", (req, res) => {
     res.render("login")
 });
 app.get("/logout", auth, async (req, res) => {
-    try {
+    try {  
+    
+         // this  is for single logout
 
-        req.document.tokens = req.document.tokens.filter((currentEle) => {
-            return currentEle.token !== req.token;
-        })
+        //  req.document.tokens = req.document.tokens.filter((currentEle) => {
+        //      return currentEle.token !== req.token;
+        //     })
+            
+            // this is for all devices logout
 
+            req.document.tokens = [];
+
+
+            // this is used for clear cookies
         res.clearCookie("jwt");
+
         await req.document.save();
         res.render("login");
+
     } catch (error) {
         res.status(500).send(error)
     }
@@ -104,25 +114,26 @@ app.post("/login", async (req, res) => {
         const email = req.body.email;
         const password = req.body.password;
         const useremail = await Register.findOne({ email: email });
-        
+
         //     bcrypt password ko again check when login
-        
+
         const isMatch = await bcrypt.compare(password, useremail.password);
-       
+
         const token = await useremail.mytoken();
 
+        res.cookie("jwt", token, {
+            expires: new Date(Date.now() + 50000),
+            httpOnly: true
+        });
+
         console.log("This is my token " + token);
-        
+
         if (isMatch) {
             res.status(201).render("home")
         }
         else {
             res.send("invalid Password")
         }
-        res.cookie("jwt", token, {
-            expires: new Date(Date.now() + 50000),
-            httpOnly: true
-        });
 
         //  this is basic method to varify password
 
